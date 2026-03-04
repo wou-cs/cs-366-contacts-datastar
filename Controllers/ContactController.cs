@@ -56,15 +56,9 @@ public class ContactController : Controller
     public async Task Validate([FromServices] IDatastarService dss)
     {
         var contact = await BuildContactFromSignals(dss);
-        var errors = GetValidationErrors(contact);
+        var errors = ContactValidator.GetErrors(contact);
 
-        await dss.PatchSignalsAsync(new
-        {
-            nameError = errors.GetValueOrDefault("Name", ""),
-            emailError = errors.GetValueOrDefault("Email", ""),
-            phoneError = errors.GetValueOrDefault("Phone", ""),
-            categoryError = errors.GetValueOrDefault("Category", "")
-        });
+        await dss.PatchSignalsAsync(BuildErrorSignals(errors));
     }
 
     // POST: /Contact/Create — SSE endpoint that adds a contact and refreshes the list
@@ -72,17 +66,11 @@ public class ContactController : Controller
     public async Task Create([FromServices] IDatastarService dss)
     {
         var contact = await BuildContactFromSignals(dss);
-        var errors = GetValidationErrors(contact);
+        var errors = ContactValidator.GetErrors(contact);
 
         if (errors.Count > 0)
         {
-            await dss.PatchSignalsAsync(new
-            {
-                nameError = errors.GetValueOrDefault("Name", ""),
-                emailError = errors.GetValueOrDefault("Email", ""),
-                phoneError = errors.GetValueOrDefault("Phone", ""),
-                categoryError = errors.GetValueOrDefault("Category", "")
-            });
+            await dss.PatchSignalsAsync(BuildErrorSignals(errors));
             return;
         }
 
@@ -122,18 +110,14 @@ public class ContactController : Controller
         };
     }
 
-    // Validate a Contact and return a dictionary of field → error message (empty if valid)
-    private Dictionary<string, string> GetValidationErrors(Contact contact)
+    // Map validation errors to Datastar signal names
+    private static object BuildErrorSignals(Dictionary<string, string> errors) => new
     {
-        ModelState.Clear();
-        TryValidateModel(contact);
-        return ModelState
-            .Where(e => e.Value!.Errors.Count > 0)
-            .ToDictionary(
-                e => e.Key,
-                e => e.Value!.Errors.First().ErrorMessage
-            );
-    }
+        nameError = errors.GetValueOrDefault("Name", ""),
+        emailError = errors.GetValueOrDefault("Email", ""),
+        phoneError = errors.GetValueOrDefault("Phone", ""),
+        categoryError = errors.GetValueOrDefault("Category", "")
+    };
 
     // DELETE: /Contact/Delete/3 — SSE endpoint that removes a contact
     [HttpDelete]

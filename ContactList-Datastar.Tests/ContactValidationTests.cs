@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using ContactList.Models;
 using Xunit;
 
@@ -6,14 +5,6 @@ namespace ContactList.Tests;
 
 public class ContactValidationTests
 {
-    private static List<ValidationResult> Validate(Contact contact)
-    {
-        var results = new List<ValidationResult>();
-        var context = new ValidationContext(contact);
-        Validator.TryValidateObject(contact, context, results, validateAllProperties: true);
-        return results;
-    }
-
     [Fact]
     public void ValidContact_PassesValidation()
     {
@@ -25,7 +16,7 @@ public class ContactValidationTests
             Category = "Friend"
         };
 
-        var errors = Validate(contact);
+        var errors = ContactValidator.GetErrors(contact);
 
         Assert.Empty(errors);
     }
@@ -37,9 +28,9 @@ public class ContactValidationTests
     {
         var contact = new Contact { Name = name!, Category = "Friend" };
 
-        var errors = Validate(contact);
+        var errors = ContactValidator.GetErrors(contact);
 
-        Assert.Contains(errors, e => e.MemberNames.Contains("Name"));
+        Assert.True(errors.ContainsKey("Name"));
     }
 
     [Theory]
@@ -49,9 +40,9 @@ public class ContactValidationTests
     {
         var contact = new Contact { Name = "Test", Category = category! };
 
-        var errors = Validate(contact);
+        var errors = ContactValidator.GetErrors(contact);
 
-        Assert.Contains(errors, e => e.MemberNames.Contains("Category"));
+        Assert.True(errors.ContainsKey("Category"));
     }
 
     [Theory]
@@ -62,9 +53,9 @@ public class ContactValidationTests
     {
         var contact = new Contact { Name = "Test", Category = "Friend", Email = email };
 
-        var errors = Validate(contact);
+        var errors = ContactValidator.GetErrors(contact);
 
-        Assert.Contains(errors, e => e.MemberNames.Contains("Email"));
+        Assert.True(errors.ContainsKey("Email"));
     }
 
     [Theory]
@@ -74,8 +65,8 @@ public class ContactValidationTests
     {
         var contact = new Contact { Name = "Test", Category = "Friend", Phone = phone };
 
-        var errors = Validate(contact);
+        var errors = ContactValidator.GetErrors(contact);
 
-        Assert.Contains(errors, e => e.MemberNames.Contains("Phone"));
+        Assert.True(errors.ContainsKey("Phone"));
     }
 }
