@@ -2,7 +2,7 @@ namespace ContactList.Models;
 
 public class StaticContactRepository : IContactRepository
 {
-    private static readonly List<Contact> _contacts = new()
+    private readonly List<Contact> _contacts = new()
     {
         new Contact { Id = 1, Name = "Alice Smith", Email = "alice@example.com",
             Phone = "503-555-0101", Category = "Work", Notes = "Project manager" },
@@ -11,7 +11,7 @@ public class StaticContactRepository : IContactRepository
         new Contact { Id = 3, Name = "Carol White", Email = "carol@example.com",
             Phone = "503-555-0103", Category = "Family", Notes = "Sister" },
     };
-    private static int _nextId = 4;
+    private int _nextId = 4;
 
     public IEnumerable<Contact> GetAll() => _contacts;
 

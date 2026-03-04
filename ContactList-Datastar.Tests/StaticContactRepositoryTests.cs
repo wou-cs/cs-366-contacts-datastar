@@ -12,7 +12,7 @@ public class StaticContactRepositoryTests
     {
         var contacts = _repo.GetAll().ToList();
 
-        Assert.True(contacts.Count >= 3);
+        Assert.Equal(3, contacts.Count);
         Assert.Contains(contacts, c => c.Name == "Alice Smith");
         Assert.Contains(contacts, c => c.Name == "Bob Jones");
         Assert.Contains(contacts, c => c.Name == "Carol White");
