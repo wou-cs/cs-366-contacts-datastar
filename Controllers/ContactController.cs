@@ -28,8 +28,7 @@ public class ContactController : Controller
     [HttpGet]
     public async Task List([FromServices] IDatastarService dss)
     {
-        var html = await RenderPartialToString("_ContactTable", _repo.GetAll());
-        await dss.PatchElementsAsync(html);
+        await PatchContactTable(dss, _repo.GetAll());
     }
 
     // GET: /Contact/Search — SSE endpoint returning filtered contacts
@@ -47,8 +46,7 @@ public class ContactController : Controller
                 (c.Phone != null && c.Phone.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                 c.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
 
-        var html = await RenderPartialToString("_ContactTable", contacts);
-        await dss.PatchElementsAsync(html);
+        await PatchContactTable(dss, contacts);
     }
 
     // POST: /Contact/Validate — SSE endpoint for inline validation as the user types
@@ -77,8 +75,7 @@ public class ContactController : Controller
         _repo.Add(contact);
 
         // Send back the updated contact list
-        var html = await RenderPartialToString("_ContactTable", _repo.GetAll());
-        await dss.PatchElementsAsync(html);
+        await PatchContactTable(dss, _repo.GetAll());
 
         // Hide the form, reset signals, and clear any validation errors
         await dss.PatchSignalsAsync(new
@@ -125,7 +122,13 @@ public class ContactController : Controller
     {
         _repo.Remove(id);
 
-        var html = await RenderPartialToString("_ContactTable", _repo.GetAll());
+        await PatchContactTable(dss, _repo.GetAll());
+    }
+
+    // Render the contact table partial and patch it into the page via SSE
+    private async Task PatchContactTable(IDatastarService dss, IEnumerable<Contact> contacts)
+    {
+        var html = await RenderPartialToString("_ContactTable", contacts);
         await dss.PatchElementsAsync(html);
     }
 
