@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using ContactList.Models;
 using StarFederation.Datastar.DependencyInjection;
 
@@ -7,10 +10,12 @@ namespace ContactList.Controllers;
 public class ContactController : Controller
 {
     private readonly IContactRepository _repo;
+    private readonly ICompositeViewEngine _viewEngine;
 
-    public ContactController(IContactRepository repo)
+    public ContactController(IContactRepository repo, ICompositeViewEngine viewEngine)
     {
         _repo = repo;
+        _viewEngine = viewEngine;
     }
 
     // GET: /Contact — serves the main page (regular Razor view)
@@ -23,7 +28,7 @@ public class ContactController : Controller
     [HttpGet]
     public async Task List([FromServices] IDatastarService dss)
     {
-        var html = RenderContactTable(_repo.GetAll());
+        var html = await RenderPartialToString("_ContactTable", _repo.GetAll());
         await dss.PatchElementsAsync(html);
     }
 
@@ -42,7 +47,7 @@ public class ContactController : Controller
                 (c.Phone != null && c.Phone.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                 c.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
 
-        var html = RenderContactTable(contacts);
+        var html = await RenderPartialToString("_ContactTable", contacts);
         await dss.PatchElementsAsync(html);
     }
 
@@ -84,7 +89,7 @@ public class ContactController : Controller
         _repo.Add(contact);
 
         // Send back the updated contact list
-        var html = RenderContactTable(_repo.GetAll());
+        var html = await RenderPartialToString("_ContactTable", _repo.GetAll());
         await dss.PatchElementsAsync(html);
 
         // Hide the form, reset signals, and clear any validation errors
@@ -136,53 +141,20 @@ public class ContactController : Controller
     {
         _repo.Remove(id);
 
-        var html = RenderContactTable(_repo.GetAll());
+        var html = await RenderPartialToString("_ContactTable", _repo.GetAll());
         await dss.PatchElementsAsync(html);
     }
 
-    // Render the contact table as an HTML string for SSE patching
-    private static string RenderContactTable(IEnumerable<Contact> contacts)
+    // Render a partial view to an HTML string for SSE patching
+    private async Task<string> RenderPartialToString(string viewName, object model)
     {
-        var contactList = contacts.ToList();
-
-        if (contactList.Count == 0)
-        {
-            return """<div id="contact-list"><p class="text-muted">No contacts found.</p></div>""";
-        }
-
-        var rows = string.Join("\n", contactList.Select(c => $"""
-                <tr>
-                    <td>{System.Net.WebUtility.HtmlEncode(c.Name)}</td>
-                    <td>{System.Net.WebUtility.HtmlEncode(c.Email ?? "")}</td>
-                    <td>{System.Net.WebUtility.HtmlEncode(c.Phone ?? "")}</td>
-                    <td>{System.Net.WebUtility.HtmlEncode(c.Category)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-danger"
-                                data-on:click="@delete('/Contact/Delete/{c.Id}')">
-                            Delete
-                        </button>
-                    </td>
-                </tr>
-            """));
-
-        return $"""
-            <div id="contact-list">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Category</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows}
-                    </tbody>
-                </table>
-            </div>
-            """;
+        ViewData.Model = model;
+        using var writer = new StringWriter();
+        var viewResult = _viewEngine.FindView(ControllerContext, viewName, false);
+        var viewContext = new ViewContext(
+            ControllerContext, viewResult.View, ViewData, TempData, writer, new HtmlHelperOptions());
+        await viewResult.View.RenderAsync(viewContext);
+        return writer.ToString();
     }
 }
 

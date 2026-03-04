@@ -1,0 +1,41 @@
+@model IEnumerable<Contact>
+
+@if (!Model.Any())
+{
+    <div id="contact-list">
+        <p class="text-muted">No contacts found.</p>
+    </div>
+}
+else
+{
+    <div id="contact-list">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Category</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    <tr>
+                        <td>@c.Name</td>
+                        <td>@(c.Email ?? "")</td>
+                        <td>@(c.Phone ?? "")</td>
+                        <td>@c.Category</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    data-on:click="@@delete('/Contact/Delete/@c.Id')">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
